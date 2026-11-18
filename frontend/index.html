@@ -168,9 +168,17 @@ async function predict(){
       <div class="ruler" role="img" aria-label="Risk ruler"><div class="tick" style="left:${THRESHOLD*100}%"><span>threshold</span></div><div class="pin" style="left:${p*100}%"><b>${(p*100).toFixed(0)}%</b></div></div>
       <h3>${churn && tips.length ? "Suggested actions" : "Suggested actions"}</h3>
       ${tips.length ? `<ul class="recs">${tips.map(t=>`<li><b>${t[0]}</b>${t[1]}</li>`).join("")}</ul>` : '<p class="empty">No risk factors from the analysis apply to this profile. Keep the service steady.</p>'}`;
-  }catch(e){
-    out.innerHTML = `<h2>Prediction</h2><p class="err">${e.message.includes("Failed to fetch") ? "Can’t reach the API." : e.message}</p>
-      <p class="empty">Check that the server is running at ${API}, and that CORS is enabled in Backend/Main.py.</p>`;
+   } catch (e) {
+    console.error("Prediction request failed:", e);
+
+    out.innerHTML = `
+      <h2>Prediction</h2>
+      <p class="err">Can't reach the API or the request failed.</p>
+      <p class="empty">${e.message}</p>
+      <p class="empty">
+        Open the browser Console (F12) and Network tab to see the exact error.
+      </p>
+    `;
   }
 }
 document.getElementById("go").onclick = predict;
