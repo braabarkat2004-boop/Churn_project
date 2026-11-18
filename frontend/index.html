@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Churn Desk – Telco customer retention</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+:root{--bg:#f2f5f6;--ink:#12303b;--mute:#5d7580;--line:#d3dde1;--safe:#1f7a6d;--warn:#d98b1f;--risk:#c2391f;--paper:#fff;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Source Sans 3",system-ui,sans-serif}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;line-height:1.2;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{padding:40px 0 24px;border-bottom:1px solid var(--line)}
+header h1{font-size:clamp(30px,5vw,48px);max-width:18ch}
+header p{max-width:60ch;color:var(--mute);margin:12px 0 0}
+.main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;padding:32px 0}
+@media(max-width:860px){.main{grid-template-columns:1fr}}
+h2{font-size:24px;margin-bottom:6px}
+.sub{color:var(--mute);margin:0 0 18px;max-width:60ch}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button{font:inherit;cursor:pointer;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:8px 14px;border-radius:4px}
+button:hover{background:var(--ink);color:#fff}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--warn);outline-offset:1px}
+button.go{background:var(--ink);color:#fff;width:100%;padding:12px;font-weight:600;margin-top:18px}
+button.go:hover{background:#0b212a}
+form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+label{display:flex;flex-direction:column;font-size:14px;color:var(--mute);gap:3px}
+select,input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink)}
+.result{position:sticky;top:16px;align-self:start;background:var(--paper);border:1px solid var(--line);padding:24px}
+.verdict{font-family:"Source Serif 4",Georgia,serif;font-size:30px;margin:4px 0}
+.pct{font-size:15px;color:var(--mute)}
+.ruler{position:relative;height:14px;margin:34px 0 28px;border-radius:7px;background:linear-gradient(90deg,var(--safe),var(--warn) 45%,var(--risk))}
+.ruler .pin{position:absolute;top:-9px;width:4px;height:32px;background:var(--ink);transform:translateX(-2px);transition:left .5s}
+.ruler .pin b{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:13px;white-space:nowrap}
+.ruler .tick{position:absolute;top:-6px;height:26px;border-left:2px dashed var(--ink);opacity:.55}
+.ruler .tick span{position:absolute;top:28px;left:-28px;font-size:12px;color:var(--mute);width:60px;text-align:center}
+.empty{color:var(--mute)}
+.err{color:var(--risk);font-weight:600}
+.recs{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+.recs li{padding-left:12px;border-left:3px solid var(--warn)}
+.recs b{display:block}
+section.band{border-top:1px solid var(--line);padding:36px 0}
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 40px;margin-top:20px}
+@media(max-width:860px){.charts{grid-template-columns:1fr}}
+.charts h3{font-size:19px;margin-bottom:4px}
+.note{font-size:14px;color:var(--mute);margin:0 0 12px}
+.row{display:grid;grid-template-columns:130px 1fr 52px;align-items:center;gap:10px;margin:7px 0;font-size:14px}
+.bar{height:16px;background:#e3eaed}
+.bar i{display:block;height:100%;background:var(--ink)}
+.bar i.hot{background:var(--risk)}
+svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--mute);margin-top:6px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.plays{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:20px}
+@media(max-width:860px){.plays{grid-template-columns:1fr}}
+.plays h3{font-size:19px;margin-bottom:6px}
+.plays p{margin:0;color:var(--mute)}
+.plays em{font-style:normal;color:var(--ink);font-weight:600}
+footer{padding:24px 0 40px;color:var(--mute);font-size:13px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Who is about to leave, and what should we do about it?</h1>
+<p>Score a customer with the churn model, then read the patterns behind the score. Charts come from the exploratory analysis of 7,043 telecom customers, 26.5% of whom churned.</p>
+</div></header>
+
+<div class="wrap main">
+<div>
+<h2>Score a customer</h2>
+<p class="sub">Fill in the profile or load an example, then ask the model for a churn probability.</p>
+<div class="presets">
+<button type="button" data-p="high">Load high-risk example</button>
+<button type="button" data-p="low">Load low-risk example</button>
+</div>
+<form id="f"></form>
+<button class="go" id="go" type="button">Predict churn risk</button>
+</div>
+
+<aside class="result" aria-live="polite" id="out">
+<h2>Prediction</h2>
+<p class="empty">No prediction yet. Submit a profile and the risk ruler will show where this customer sits against the alert threshold.</p>
+</aside>
+</div>
+
+<section class="band"><div class="wrap">
+<h2>What the data says about churn</h2>
+<p class="sub">Contract type and tenure matter most. Price matters, but less than it first appears.</p>
+<div class="charts">
+<div><h3>Churn rate by contract</h3><p class="note">Share of customers who left, per contract type.</p><div id="c1"></div></div>
+<div><h3>Churn rate by monthly bill</h3><p class="note">Customers split into four equal groups by monthly charge.</p><div id="c2"></div></div>
+<div><h3>Features most linked to churn</h3><p class="note">Cramér’s V from chi-square tests; higher means a stronger link.</p><div id="c3"></div></div>
+<div><h3>Choosing the alert threshold</h3><p class="note">Logistic regression on the test set. A lower threshold catches more churners but flags more people who would have stayed.</p><div id="c4"></div></div>
+</div>
+</div></section>
+
+<section class="band"><div class="wrap">
+<h2>What to do with it</h2>
+<p class="sub">Three plays that follow directly from the analysis above.</p>
+<div class="plays">
+<div><h3>Move month-to-month customers onto longer terms</h3><p><em>43%</em> of month-to-month customers churn, against 11% on one-year and 3% on two-year contracts. Offer a discount or perk for committing.</p></div>
+<div><h3>Protect the first months</h3><p>Tenure has the strongest negative link to churn (−0.35). Give new customers free premium service for the first three months and a named onboarding contact.</p></div>
+<div><h3>Fix support and offer a cheaper plan</h3><p>Customers without online security or tech support churn far more. Give at-risk customers priority support, and a lighter package with fewer services if the bill is the problem.</p></div>
+</div>
+</div></section>
+
+<footer><div class="wrap">Predictions come from the model served at <code id="apiurl"></code>. Start it with <code>python -m uvicorn Backend.Main:app --reload</code>.</div></footer>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const THRESHOLD = 0.2938;
+document.getElementById("apiurl").textContent = API + "/predict";
+
+const YN = ["Yes","No"], YNI = ["Yes","No","No internet service"];
+const FIELDS = [
+ ["gender","Gender",["Female","Male"]],["SeniorCitizen","Senior citizen",[0,1]],
+ ["Partner","Partner",YN],["Dependents","Dependents",YN],
+ ["tenure","Tenure (months)","n"],["PhoneService","Phone service",YN],
+ ["MultipleLines","Multiple lines",["Yes","No","No phone service"]],
+ ["InternetService","Internet service",["DSL","Fiber optic","No"]],
+ ["OnlineSecurity","Online security",YNI],["OnlineBackup","Online backup",YNI],
+ ["DeviceProtection","Device protection",YNI],["TechSupport","Tech support",YNI],
+ ["StreamingTV","Streaming TV",YNI],["StreamingMovies","Streaming movies",YNI],
+ ["Contract","Contract",["Month-to-month","One year","Two year"]],
+ ["PaperlessBilling","Paperless billing",YN],
+ ["PaymentMethod","Payment method",["Electronic check","Mailed check","Bank transfer (automatic)","Credit card (automatic)"]],
+ ["MonthlyCharges","Monthly charges","n"],["TotalCharges","Total charges","n"]
+];
+const HIGH = {gender:"Female",SeniorCitizen:0,Partner:"Yes",Dependents:"No",tenure:1,PhoneService:"No",MultipleLines:"No phone service",InternetService:"DSL",OnlineSecurity:"No",OnlineBackup:"Yes",DeviceProtection:"No",TechSupport:"No",StreamingTV:"No",StreamingMovies:"No",Contract:"Month-to-month",PaperlessBilling:"Yes",PaymentMethod:"Electronic check",MonthlyCharges:29.85,TotalCharges:29.85};
+const LOW = {gender:"Male",SeniorCitizen:0,Partner:"Yes",Dependents:"Yes",tenure:60,PhoneService:"Yes",MultipleLines:"No",InternetService:"DSL",OnlineSecurity:"Yes",OnlineBackup:"Yes",DeviceProtection:"Yes",TechSupport:"Yes",StreamingTV:"No",StreamingMovies:"No",Contract:"Two year",PaperlessBilling:"No",PaymentMethod:"Credit card (automatic)",MonthlyCharges:55,TotalCharges:3300};
+
+const form = document.getElementById("f");
+form.innerHTML = FIELDS.map(([k,l,o]) => `<label>${l}` + (o==="n"
+  ? `<input type="number" step="any" min="0" name="${k}">`
+  : `<select name="${k}">${o.map(v=>`<option>${v}</option>`).join("")}</select>`) + `</label>`).join("");
+function fill(d){ FIELDS.forEach(([k]) => form.elements[k].value = d[k]); }
+fill(HIGH);
+document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => fill(b.dataset.p==="high" ? HIGH : LOW));
+
+function readForm(){
+  const d = {};
+  FIELDS.forEach(([k,,o]) => { const v = form.elements[k].value; d[k] = (o==="n"||k==="SeniorCitizen") ? Number(v) : v; });
+  return d;
+}
+
+function advice(d){
+  const r = [], net = d.InternetService !== "No";
+  if (d.Contract === "Month-to-month") r.push(["Offer a longer contract","Month-to-month customers churn at about 43%. A one-year discount or perk is the strongest lever."]);
+  if (d.tenure < 12) r.push(["Protect the first year","New customers leave most. Give three months of free premium service and a check-in call."]);
+  if (net && (d.TechSupport === "No" || d.OnlineSecurity === "No")) r.push(["Bundle support","No tech support or online security is linked to higher churn. Offer priority support for free."]);
+  if (d.PaymentMethod === "Electronic check") r.push(["Move to automatic payment","Electronic-check customers churn more. Reward a switch to card or bank autopay."]);
+  if (d.InternetService === "Fiber optic" && d.MonthlyCharges > 70) r.push(["Review the plan","A high fiber bill is a churn signal. Offer a cheaper package with fewer services."]);
+  return r;
+}
+
+async function predict(){
+  const out = document.getElementById("out"), d = readForm();
+  out.innerHTML = '<h2>Prediction</h2><p class="empty">Scoring…</p>';
+  try{
+    const res = await fetch(API + "/predict", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(d)});
+    if (!res.ok) throw new Error(res.status === 422 ? "The API rejected one of the values. Check the spelling of each field." : "The API returned an error (" + res.status + ").");
+    const r = await res.json(), p = r.churn_probability, churn = r.churn_prediction === 1;
+    const tips = advice(d);
+    out.innerHTML = `<h2>Prediction</h2>
+      <div class="verdict" style="color:${churn?"var(--risk)":"var(--safe)"}">${churn?"Likely to churn":"Likely to stay"}</div>
+      <div class="pct">${(p*100).toFixed(1)}% churn probability. Alert threshold is ${(THRESHOLD*100).toFixed(0)}%.</div>
+      <div class="ruler" role="img" aria-label="Risk ruler"><div class="tick" style="left:${THRESHOLD*100}%"><span>threshold</span></div><div class="pin" style="left:${p*100}%"><b>${(p*100).toFixed(0)}%</b></div></div>
+      <h3>${churn && tips.length ? "Suggested actions" : "Suggested actions"}</h3>
+      ${tips.length ? `<ul class="recs">${tips.map(t=>`<li><b>${t[0]}</b>${t[1]}</li>`).join("")}</ul>` : '<p class="empty">No risk factors from the analysis apply to this profile. Keep the service steady.</p>'}`;
+  }catch(e){
+    out.innerHTML = `<h2>Prediction</h2><p class="err">${e.message.includes("Failed to fetch") ? "Can’t reach the API." : e.message}</p>
+      <p class="empty">Check that the server is running at ${API}, and that CORS is enabled in Backend/Main.py.</p>`;
+  }
+}
+document.getElementById("go").onclick = predict;
+
+function bars(id, rows, fmt, hot){
+  const max = Math.max(...rows.map(r=>r[1]));
+  document.getElementById(id).innerHTML = rows.map(r =>
+    `<div class="row"><span>${r[0]}</span><div class="bar"><i class="${hot&&r[1]===max?"hot":""}" style="width:${r[1]/max*100}%"></i></div><b>${fmt(r[1])}</b></div>`).join("");
+}
+bars("c1", [["Month-to-month",43],["One year",11],["Two year",3]], v=>v+"%", true);
+bars("c2", [["Low",11.2],["Medium",24.6],["High",37.5],["Very high",32.9]], v=>v+"%", true);
+bars("c3", [["Contract",.41],["Online security",.35],["Tech support",.34],["Internet service",.32],["Payment method",.30],["Online backup",.29],["Device protection",.28]], v=>v.toFixed(2), false);
+
+const T = [.2,.3,.35,.4,.45,.5,.55,.6], A = [.709,.784,.800,.806,.815,.813,.811,.801], R = [.882,.780,.735,.689,.633,.552,.485,.402], P = [.473,.567,.600,.621,.657,.680,.710,.725];
+const W=520,H=280,L=40,B=30,x=i=>L+i*(W-L-10)/(T.length-1),y=v=>H-B-(v-.3)/.7*(H-B-10);
+const line=(d,c)=>`<polyline fill="none" stroke="${c}" stroke-width="3" points="${d.map((v,i)=>x(i)+","+y(v)).join(" ")}"/>`;
+let g="";
+[.4,.6,.8,1].forEach(v=>g+=`<line x1="${L}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" stroke="#d3dde1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="#5d7580">${v}</text>`);
+T.forEach((t,i)=>g+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="12" fill="#5d7580">${t}</text>`);
+document.getElementById("c4").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accuracy, recall and precision by threshold">${g}${line(R,"#c2391f")}${line(A,"#12303b")}${line(P,"#d98b1f")}</svg>
+<div class="legend"><span style="--c:#c2391f">Recall</span><span style="--c:#12303b">Accuracy</span><span style="--c:#d98b1f">Precision</span></div>`;
+</script>
+</body>
+</html>
