@@ -108,7 +108,7 @@ footer{padding:24px 0 40px;color:var(--mute);font-size:13px;border-top:1px solid
 <footer><div class="wrap">Predictions come from the model served at <code id="apiurl"></code>. Start it with <code>python -m uvicorn Backend.Main:app --reload</code>.</div></footer>
 
 <script>
-const API = "https://your-app.snapdeploy-address";
+const API = "https://churn-project-e8e18.containers.snapdeploy.app";
 const THRESHOLD = 0.2938;
 document.getElementById("apiurl").textContent = API + "/predict";
 
